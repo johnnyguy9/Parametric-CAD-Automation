@@ -13,6 +13,7 @@ heavy boundary-representation operations to its OpenCASCADE C++ geometry kernel.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable
 
 import FreeCAD as App
@@ -86,6 +87,46 @@ def wall_hole_positions(params: BracketParameters) -> list[App.Vector]:
     y_center = params.width - params.wall_thickness * 0.5
     z_center = params.thickness + params.wall_height * 0.56
     return [App.Vector(x_value, y_center, z_center) for x_value in x_positions]
+
+
+def inspection_table(params: BracketParameters) -> list[dict[str, object]]:
+    """
+    Build a structured feature table for downstream review or reporting.
+
+    CAD automation is strongest when the model and its inspection metadata are
+    generated from the same parameter source.
+    """
+
+    rows: list[dict[str, object]] = []
+    for index, center in enumerate(bolt_center_positions(params), start=1):
+        rows.append({
+            "feature": f"base_bolt_{index}",
+            "diameter": params.bolt_diameter,
+            "center_mm": (round(center.x, 3), round(center.y, 3), round(center.z, 3)),
+            "axis": "+Z",
+        })
+
+    for index, center in enumerate(wall_hole_positions(params), start=1):
+        rows.append({
+            "feature": f"wall_mount_{index}",
+            "diameter": params.wall_hole_diameter,
+            "center_mm": (round(center.x, 3), round(center.y, 3), round(center.z, 3)),
+            "axis": "-Y",
+        })
+    return rows
+
+
+def shape_metrics(shape: Part.Shape) -> dict[str, float]:
+    """Return engineering metrics that help validate generated geometry."""
+
+    bounds = shape.BoundBox
+    return {
+        "volume_mm3": round(shape.Volume, 3),
+        "surface_area_mm2": round(shape.Area, 3),
+        "bounds_x_mm": round(bounds.XLength, 3),
+        "bounds_y_mm": round(bounds.YLength, 3),
+        "bounds_z_mm": round(bounds.ZLength, 3),
+    }
 
 
 def make_base(params: BracketParameters) -> Part.Shape:
@@ -211,6 +252,43 @@ def build_bracket(params: BracketParameters) -> Part.Shape:
     return bracket
 
 
+def write_inspection_report(
+    shape: Part.Shape,
+    params: BracketParameters,
+    output_path: str = "bracket_inspection_report.txt",
+) -> Path:
+    """
+    Write a lightweight generated-model report next to the CAD document.
+
+    The report is deliberately plain text so it can be consumed by humans, CI
+    logs, or later automation without additional dependencies.
+    """
+
+    report_path = Path(output_path)
+    metrics = shape_metrics(shape)
+    lines = [
+        "Parametric Mounting Bracket Inspection Report",
+        "=" * 52,
+        "",
+        "Parameters:",
+    ]
+    for key, value in params.__dict__.items():
+        lines.append(f"- {key}: {value}")
+
+    lines.extend(["", "Computed Model Metrics:"])
+    for key, value in metrics.items():
+        lines.append(f"- {key}: {value}")
+
+    lines.extend(["", "Hole Feature Table:"])
+    for row in inspection_table(params):
+        lines.append(
+            "- {feature}: diameter={diameter}mm center={center_mm} axis={axis}".format(**row)
+        )
+
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report_path
+
+
 def publish_to_document(shape: Part.Shape, params: BracketParameters) -> App.Document:
     """Create a FreeCAD document object so the generated solid is visible/editable."""
 
@@ -224,8 +302,13 @@ def publish_to_document(shape: Part.Shape, params: BracketParameters) -> App.Doc
 
     document.recompute()
     App.Console.PrintMessage("Parametric bracket generated successfully.\n")
-    App.Console.PrintMessage(f"Base bolt centers: {bolt_center_positions(params)}\n")
-    App.Console.PrintMessage(f"Wall hole centers: {wall_hole_positions(params)}\n")
+    App.Console.PrintMessage(f"Model metrics: {shape_metrics(shape)}\n")
+    App.Console.PrintMessage(f"Hole feature table: {inspection_table(params)}\n")
+    try:
+        report_path = write_inspection_report(shape, params)
+        App.Console.PrintMessage(f"Inspection report written to: {report_path.resolve()}\n")
+    except OSError as exc:
+        App.Console.PrintWarning(f"Inspection report skipped: {exc}\n")
     return document
 
 

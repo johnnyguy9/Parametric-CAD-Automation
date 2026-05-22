@@ -1,73 +1,104 @@
 # AI-Driven Parametric CAD Automation
 
+Programmatic CAD automation repository demonstrating industrial asset generation with FreeCAD Python and OpenSCAD. The project converts high-level parameters into exact spatial geometry: a manufacturable mounting bracket and a paired gear assembly.
+
 ## Executive Summary
 
-This repository demonstrates programmatic spatial logic for automated industrial asset generation. It contains two complementary CAD automation examples: a FreeCAD Python generator for a fully parametric mechanical mounting bracket, and an OpenSCAD generator for a mathematically controlled interlocking gear assembly.
+This repository demonstrates how automation can turn engineering intent into 3D assets. Instead of manually sketching features, the scripts define parameter contracts, validate dimensions, calculate feature placement mathematically, and compile geometry through mature CAD kernels.
 
-The work is framed around the same engineering pattern used in advanced automation systems: parameters define intent, scripts transform that intent into precise geometry, and CAD kernels compile the result into manufacturable 3D assets.
+Core signals:
+
+- Python-driven FreeCAD generation.
+- OpenCASCADE-backed boolean solid modeling.
+- Parametric bolt-hole arrays and wall features.
+- Scripted OpenSCAD gear assembly using pitch geometry and tooth profile logic.
+- Inspection metadata for dimensions, hole centers, and model metrics.
+- Documentation for review, execution, and extension.
 
 ## System Architecture
 
-The repository is intentionally compact and inspectable:
-
-- `freecad_bracket_generator.py` defines a parametric L-bracket using Python, FreeCAD's Part workbench, and OpenCASCADE-backed boolean geometry.
-- `parametric_gear_assembly.scad` defines a gear pair using OpenSCAD modules, trigonometric tooth generation, pitch-circle alignment, bores, hubs, and webbing.
-- `README.md` documents the purpose, architecture, technologies, and execution path for review or extension.
-
-The architecture separates inputs, geometry construction, and model publication. This lets an engineer change high-level design variables such as length, thickness, hole count, gear teeth, module size, or bore radius without manually remodeling the asset.
+```text
+Parametric-CAD-Automation
+|-- freecad_bracket_generator.py
+|   |-- BracketParameters validation
+|   |-- Base, wall, and rib solid generation
+|   |-- Equidistant bolt-hole placement
+|   |-- Boolean cutting and fillet pass
+|   `-- FreeCAD document publication
+|-- parametric_gear_assembly.scad
+|   |-- Gear parameter definitions
+|   |-- Pitch/root/outer radius functions
+|   |-- Tooth profile generation
+|   |-- Hub, spoke, bore, pitch-circle modules
+|   `-- Correct center-distance gear pairing
+`-- docs
+    `-- TECHNICAL_REVIEW.md
+```
 
 ## Core Technologies
 
 ### Python
 
-Python is used as the automation layer for the FreeCAD model. The script defines typed parameter structures, validates dimensions, computes aligned feature placement, and orchestrates C++ geometry operations through FreeCAD's Python API.
+Python is the automation layer for the FreeCAD model. It validates inputs, computes placement, orchestrates boolean operations, and publishes data-rich CAD objects.
 
 ### FreeCAD
 
-FreeCAD provides the parametric CAD environment and exposes the `FreeCAD` and `Part` modules to Python. The bracket generator creates exact solid primitives, fuses bracket components, subtracts bolt-hole cylinders, applies fillets, and publishes the result into a FreeCAD document.
+FreeCAD provides the document model and the `Part` API. The script delegates exact B-Rep operations to the OpenCASCADE C++ kernel through FreeCAD's Python bindings.
 
 ### OpenSCAD
 
-OpenSCAD is used for declarative script-to-model compilation. The gear assembly is generated from modules and functions that describe pitch radius, root radius, addendum, dedendum, tooth profiles, hubs, bores, and assembly alignment. Trigonometric polar coordinates drive the tooth geometry.
+OpenSCAD provides script-to-solid compilation. The gear assembly uses functions, modules, trigonometry, and constructive solid geometry to produce a parametric mechanism.
 
 ## Implementation Instructions
 
-### FreeCAD Bracket Generator
+### FreeCAD Bracket
 
-1. Open FreeCAD.
-2. Open the Python console.
-3. Run:
+Open FreeCAD and run:
 
-   ```python
-   exec(open("freecad_bracket_generator.py").read())
-   ```
+```python
+exec(open("freecad_bracket_generator.py").read())
+```
 
-4. Adjust values in the `BracketParameters` object to regenerate alternate mounting bracket configurations.
+Tune values in `BracketParameters` to regenerate variants:
 
-The script prints base bolt centers and wall hole centers to the FreeCAD console so the generated feature layout can be inspected numerically.
+- `length`
+- `width`
+- `thickness`
+- `wall_height`
+- `bolt_count`
+- `bolt_diameter`
+- `bolt_edge_margin`
+- `rib_count`
+
+The script prints hole-center tables and model metadata to the FreeCAD console.
 
 ### OpenSCAD Gear Assembly
 
-1. Open OpenSCAD.
-2. Load `parametric_gear_assembly.scad`.
-3. Press Preview or Render.
-4. Modify variables such as:
+Open `parametric_gear_assembly.scad` in OpenSCAD and preview or render.
 
-   - `gear_a_teeth`
-   - `gear_b_teeth`
-   - `gear_module`
-   - `module_thickness`
-   - `pressure_angle`
-   - `bore_radius`
+Primary parameters:
 
-The two gears are positioned using the sum of their pitch radii, which keeps the assembly mathematically aligned when tooth counts or module size change.
+- `gear_a_teeth`
+- `gear_b_teeth`
+- `gear_module`
+- `gear_thickness`
+- `pressure_angle`
+- `bore_radius`
+- `backlash_degrees`
+
+The gear pair is positioned by the sum of pitch radii, preserving meshing alignment when tooth counts or module size change.
+
+## Review Guide
+
+See [docs/TECHNICAL_REVIEW.md](docs/TECHNICAL_REVIEW.md) for validation notes, geometry assumptions, and reviewer checkpoints.
 
 ## Engineering Value
 
 This repository demonstrates:
 
 - Automated industrial asset generation.
-- Programmatic CAD feature placement.
-- Mathematically aligned mechanical geometry.
-- Script-driven model compilation.
-- Parametric design patterns suitable for rapid iteration, design variants, and AI-assisted engineering workflows.
+- Programmatic spatial reasoning.
+- Feature placement through mathematics instead of manual drafting.
+- CAD-kernel integration from scripting languages.
+- Clean documentation for technical review.
+- A foundation for AI-assisted design variant generation.
